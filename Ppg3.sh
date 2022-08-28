@@ -153,45 +153,47 @@ psql -U postgres universidad -c "INSERT INTO ProyectoInvestigador(RefProyecto, T
 
 #Inserción de datos en la tabla Docente
 echo "Insertando datos en la tabla Docente"
-psql -U postgres universidad -c "INSERT INTO Docente (DNI, puestoDocente)
-								 VALUES ('23854067P', 'Profesor'), 
-								 		('37492099L', 'Profesor interino'),
-										('85065830C','Jefe de Departamento'); "
+psql -U postgres universidad -c "INSERT INTO Docente (DNI, Nombre, Apellido1, Apellido2, puestoDocente)
+								 VALUES ('48395720N', 'Pedro', 'Sosa', 'Santos', 'Profesor'), 
+								 		('94384022Q', 'Marc', 'Conejos', 'Pedraz', 'Profesor interino'),
+										('48509910T', 'Enrique', 'Suñen', 'Corlat','Jefe de Departamento'); "
 
 #Inserción de datos en la tabla Investigador
 echo "Insertando datos en la tabla Investigador"
-psql -U postgres universidad -c "INSERT INTO Investigador (DNI, ORCID)
-								 VALUES ('67559902Q', 'Jefe de proyecto'),
-								 		('10284277N','Becario'),
-										('37492099L','Becario'); "
+psql -U postgres universidad -c "INSERT INTO Investigador (DNI, Nombre, Apellido1, Apellido2, ORCID)
+								 VALUES ('99481239I', 'Jhon', 'Smith', 'Anthony', 'Jefe de proyecto'),
+								 		('42870012L', 'Andres', 'Berdejo', 'Soler','Becario'),
+										('73998241F', 'Dionisio', 'Gracia', 'Portat','Becario'),
+										('48509910T', 'Enrique', 'Suñen', 'Corlat','Jefe de Proyecto'); "
 
 #Inserción de datos en la tabla Imparte
 echo "Insertando datos en la tabla Imparte"
 psql -U postgres universidad -c "INSERT INTO Imparte(Cod_Asignatura, Cod_Docente)
-								 VALUES ('1', '23854067P'),
-								 		('2','23854067P'),
-								 		('4','23854067P'), 
-										('1','37492099L'),
-										('3','85065830C'),
-										('5','85065830C'),
-										('4','37492099L'),
-										('6','37492099L'),
-										('2','37492099L'),
-										('3','37492099L'); "
+								 VALUES ('1','48395720N'),
+								 		('2','94384022Q'),
+								 		('4','48395720N'), 
+										('1','48509910T'),
+										('3','48509910T'),
+										('5','48509910T'),
+										('4','94384022Q'),
+										('6','48509910T'),
+										('2','48509910T'),
+										('3','48395720N'); "
 
 #Inserción de datos en la tabla Participa
 echo "Insertando datos en la tabla Participa"
 psql -U postgres universidad -c "INSERT INTO Participa(Cod_Proyecto, Cod_Investigador)
-								 VALUES (6113, '67559902Q'), 
-								 		(6113,'10284277N'), 
-								 		(2271,'10284277N'), 
-										(2271,'37492099L'), 
-										(5390,'37492099L'),
-										(0420,'10284277N'),
-										(0420,'37492099L'), 
-										(0420,'67559902Q'),
-										(7321,'10284277N'),
-										(7321,'67559902Q'); "
+								 VALUES (6113, '99481239I'), 
+								 		(6113,'42870012L'), 
+								 		(2271,'73998241F'), 
+										(2271,'99481239I'), 
+										(5390,'42870012L'),
+										(0420,'73998241F'),
+										(0420,'99481239I'), 
+										(0420,'42870012L'),
+										(7321,'73998241F'),
+										(7321,'99481239I'),
+										(7321,'48509910T'); "
 
 
 
