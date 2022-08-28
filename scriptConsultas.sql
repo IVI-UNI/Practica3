@@ -2,7 +2,7 @@
 Resultado: Devuelve todos los empleados con todas las columnas de su tabla
 
 */
-SELECT * FROM empleado;
+SELECT DISTINCT * FROM empleado;
 
 /* Seleccionar sólo los empleados docentes que no sean investigadores
 	Resultado: Devuelve los DNI de los empleados docentes y no investigadores
@@ -25,9 +25,9 @@ WHERE dni IN (SELECT dni
 							  	FROM Investigador));
 								 
 /* Enunciado: Mostrar todos los empleados cuyo primer apellido sea “Gracia”.
-	Resultado: NO devuelve ningun empleado porque ninguno se apellida "Gracia"
+	Resultado: Devuelve el unico empleado con apellido "Gracia", un Investigador
 */
-SELECT *
+SELECT DISTINCT *
 FROM empleado
 WHERE apellido1 ='Gracia'; 
 
