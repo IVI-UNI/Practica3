@@ -1,11 +1,6 @@
-/**
- * servidorRPC.c
- *
- * Funciones RPC del servidor para la cuenta y búsqueda de primos.
- *
- * Radu Constantin Robu - 07/11/2022
- */
 
+
+#include "calcular_primos.h"
 #include "primos.h"
 #include <stdio.h>
 
@@ -17,93 +12,68 @@
 
 char *SERVICIOS[] = {"contar", "buscar"};
 
-/**
- * Función RPC para contar el número de primos entre dos valores.
- * @param min valor inferior del rango
- * @param max valor superior del rango
- * @param rqstp
- * @return número de primos contados
- */
+/** Función con parametros de entrada, nip de quien solicita el servicio, min y max indican el rango
+ *Devuelve el número de primos encontrados el rango*/
 int *contar_1_svc(int nip, int min, int max, struct svc_req *rqstp) {
-    static int resultado;
+    static int nPrimos;
 
-    fprintf(stderr, MENSAJE_PETICION, nip, SERVICIOS[0], min, max);
+    printf(INFO_SOLICITUD, nip, SERVICIOS[0], min, max);
 
-    resultado = cuenta_primos(min, max);
-    fprintf(stderr, MENSAJE_SERVICIO_CONTAR, min, max,
-            resultado);
+    nPrimos = cuenta_primos(min, max);
 
-    return (&resultado);
+    printf(RESPUESTA_CONTAR, nPrimos, min, max);
+
+    return (&nPrimos);
 }
 
-/**
- * Función RPC para buscar los números primos entre dos valores.
- * @param min valor inferior del rango
- * @param max valor superior del rango
- * @param reqstp
- * @return número de primos contados
- */
-struct primos *buscar_1_svc(int nip, int min, int max, struct svc_req *reqstp) {
+/** Función con parametros de entrada, nip de quien solicita el servicio, min y max indican el rango
+ *Devuelve el número de primos encontrados el rango*/
+struct encontrados *buscar_1_svc(int nip, int min, int max, struct svc_req *reqstp) {
     int i;
-    static struct primos resultado;
+    static struct encontrados respuesta;
 
-    fprintf(stderr, MENSAJE_PETICION, nip, SERVICIOS[1], min, max);
+    printf(INFO_SOLICITUD, nip, SERVICIOS[0], min, max);
 
-    resultado.numero = encuentra_primos(min, max, resultado.vector);
-    fprintf(stderr, MENSAJE_SERVICIO_BUSCAR, min, max);
+    respuesta.nPrimos = encuentra_primos(min, max, resultado.vectorPrimos);
+    
+    printf(RESPUESTA_ENCONTRAR);
 
-    for (i = 0; i < resultado.numero; i++) {
-        printf("%d ", resultado.vector[i]);
+    for (i = 0; i < resultado.nPrimos; i++) {
+        printf("%d \t ", resultado.vectorPrimos[i]);
     }
     printf("\n");
 
-    return (&resultado);
+    return (&respuesta);
 }
 
-/**
- * Función auxiliar para contar el número de primos entre dos valores.
- * @param min valor inferior del rango
- * @param max valor superior del rango
- * @return número de primos contados
- */
-int cuenta_primos(int min, int max) {
-    int i, contador;
+int cuenta_primos(int min, int max){
+  int i, contador;
+  contador = 0;
+  
+  for (i = min; i <= max; i++)
+    if (esprimo(i)) contador = contador + 1;
 
-    contador = 0;
-
-    for (i = min; i <= max; i++)
-        if (esprimo(i)) contador = contador + 1;
-
-    return (contador);
+  return (contador);
 }
 
-/**
- * Función auxiliar para encontrar los números primos entre dos valores.
- * @param min valor inferior del rango
- * @param max valor superior del rango
- * @param vector que contendrá los números primos
- * @return número de primos contados
- */
-int encuentra_primos(int min, int max, int vector[]) {
-    int i, contador;
-    contador = 0;
 
-    for (i = min; i <= max; i++)
-        if (esprimo(i)) vector[contador++] = i;
+int encuentra_primos(int min, int max, int vector[]){
+  int i, contador;
 
-    return (contador);
+  contador = 0;
+
+  for (i = min; i <= max; i++)
+    if (esprimo(i)) vector[contador++] = (uint32_t) ntohl(i);
+
+  return (contador);
 }
 
-/**
- * Función auxiliar que devuelve si un número es primo o no.
- * @param n número de prueba
- * @return TRUE si n es primo
- */
-int esprimo(int n) {
-    int i;
 
-    for (i = 2; i * i <= n; i++)
-        if ((n % i) == 0) return (0);
+int esprimo(int n){
+  int i;
 
-    return (1);
+  for (i = 2; i*i <= n; i++)
+    if ((n % i) == 0) return (0);
+
+  return (1);
 }
