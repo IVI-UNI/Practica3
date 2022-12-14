@@ -45,21 +45,73 @@
 #define MENSAJE_TIEMPO_SERVICIO "El servidor ha tardado %ld.%ld06 segundos en %s los primos entre %d y %d.\n"
 #define MENSAJE_FIN_PROCESO "\nEl proceso ha acabado.\n"
 
-const char *namehosts[] = {"10.7.1.164"};
-const char *SERVICIOS[] = {"contar", "buscar"};
+const char *namehosts[] = {"127.0.0.1"};
+const char *servicio[] = {"contar", "buscar"};
+const int static hilosID[] = {0,1,2,3};
+int static hilosCreados[4];
+int static minHilo[4];
+int static maxHilo[4];
+int static posiciones[4];
+int static bytes_leidos[4];
+int static bytes_leidos_total[4];
+int static servicioSolicitado;
+int static nip;
+int static sock[4];
+struct hostent *hostIP[4];
+struct sockaddr_in sockDirecciones[4];
+int static primosHilo[4];
+int static primosHiloSuma[4];
+int static nPrimosLeer[4];
+int static *intPtr[4];
+char static *respuesta[4];
+int static parametrosHilos[4][4];
+int static primosTotal;
+int static desplazar[4] = {0,0,0,0};
+uint32_t static matrizPrimos[4][MAXIMO];
+uint32_t contarPrimos = 0;
+uint32_t obtenerPrimos = 1;
+
+struct timeval inicioServicio;
+bool primerHilo = true;
+
+pthread_mutex_t static mutexCond;
+pthread_cond_t static otroHilo;
+
+const char* vectorServidores[] = {"10.7.1.161", "10.7.1.170", "10.7.1.173", "10.7.1.168"};
+
 
 uint32_t parametros[NUM_THREADS][NUM_PARAMETROS];
 static int num_primos_threads[NUM_THREADS];
-static struct primos *primos_threads[NUM_THREADS];
+static struct encontrados *primos_threads[NUM_THREADS];
 
 void *thread_primos(void *arg);
 
 int main(int argc, char *argv[]) {
-    int num_threads[] = {0, 1, 2, 3};
-    int distribucion, nip, servicio, min, max;
-    int i, j, rango, primos_totales;
-    pthread_t primos_tid[NUM_THREADS];
+    //int distribucion, nip, servicio, min, max;
+    //int i, j, rango, primos_totales;
+    pthread_t hilo[MAX_HILOS];
+	int i=0;
+	int servidores = atoi(argv[1]);
+	nip = atoi(argv[2]);
+	servicioSolicitado = atoi(argv[3]);
+	int minTotal = atoi(argv[4]);
+	int maxTotal = atoi(argv[5]);
+	int rangoServidor;
+	int limitePeticion = 100000000;
+	int restoPeticion = maxTotal%limitePeticion;
+	int minPeticion = minTotal;
+	int numerosIntervalo=(maxTotal-minTotal+1);
+	int maxPeticion;
+	//argumentos_struct argumentos_hilo;
+	int finiquito = 0;
+	int hilosEsperar = 0;
+	int hiloLibre=0;
+   
+   	/**Comienza el contador para el programa entero**/
+	struct timeval inicioPrograma, finPrograma, finServicio;
+	gettimeofday(&inicioPrograma, NULL);												
 
+    /*
     if (argc != MAX_ARGUMENTOS) {
         printf(ERROR_NUMERO_PARAMETROS);
         exit(-3);
@@ -69,86 +121,170 @@ int main(int argc, char *argv[]) {
     nip = atoi(argv[ARGV_NIP]);
     servicio = atoi(argv[ARGV_SERVICIO]);
     min = atoi(argv[ARGV_MIN]);
-    max = atoi(argv[ARGV_MAX]);
+    max = atoi(argv[ARGV_MAX]);*/
 
-    printf(MENSAJE_PARAMETROS_CORRECTOS);
+    printf(INFO_SOLICITUD, nip, servicio[servicioSolicitado], minTotal, maxTotal);
 
-    for (i = 0; i < distribucion; i++) {
-        rango = (max - min) / distribucion;
+    /**Inicializar mutex y variable condición**/
+	if (pthread_mutex_init(&mutexCond, NULL) != 0) {                                    
+    	perror("mutex_lock");                                                       
+    	exit(1);                                                                    
+  	}  
 
-        parametros[i][NIP] = nip;
-        parametros[i][SERVICIO] = servicio;
+    pthread_cond_init(&otroHilo, NULL);
 
-        if (i == 0) {
-            parametros[i][MIN] = min;
-            parametros[i][MAX] = min + rango;
-        } else {
-            parametros[i][MIN] = min + (i * rango) + 1;
-            parametros[i][MAX] = parametros[i][MIN] + (i * rango);
-        }
 
-        if (i > 0 && i < distribucion - 1) {
-            parametros[i][MAX] = min + (i + 1) * rango;
-        } else if (i == distribucion - 1) {
-            parametros[i][MAX] = max;
-        }
+/**Trocear el intervalo entre servidores**/
+	if (servidores>1){
+		rangoServidor = numerosIntervalo/servidores;
+	}else{
+		rangoServidor = numerosIntervalo;
+	}
 
-        pthread_create(&primos_tid[i], NULL, thread_primos,
-                       (void *) num_threads[i]);
-    }
+	if (limitePeticion > rangoServidor){
+		maxPeticion = minTotal+rangoServidor-1;
+	}else{
+		maxPeticion = minTotal+limitePeticion-1;
+	}
+	
+	/**Bucle para la creación de hilos**/
+	while(finiquito != 1){	
+		
+		if (maxPeticion == maxTotal){
+			finiquito = 1;
+		}
+		/**Semáforo de control de creación de hilos**/
+		pthread_mutex_lock(&mutexCond);
+		if (i == servidores){
+			pthread_cond_wait(&otroHilo, &mutexCond);
+			hiloLibre = comprobar_hilos(servidores);
+			if (servidores == 1){
+				i = 0;
+				hiloLibre = i;
+			}
+		}
+		pthread_mutex_unlock(&mutexCond);
 
-    for (i = 0; i < distribucion; i++) {
-        pthread_join(primos_tid[i], NULL);
-    }
+		/**Asignación de intervalo de numeros al hilo**/
+		minHilo[hiloLibre]= minPeticion;
+		maxHilo[hiloLibre] = maxPeticion;
 
-    printf(MENSAJE_FIN_PROCESO);
-    exit(0);
+
+		/**Creación del nuevo hilo**/
+		if((pthread_create(&hilo[hiloLibre], NULL, &funcion, (void *)&hilosID[hiloLibre])) != 0)
+			perror("Error al crear el hilo");
+		
+		/**Actualizacion del array de control de la creación de hilos**/
+		pthread_mutex_lock(&mutexCond);
+		hilosCreados[hiloLibre] =1;
+		pthread_mutex_unlock(&mutexCond);
+		
+		/**Cálculo del nuevo rango del próximo hilo**/
+		minPeticion = maxPeticion + 1;
+		if((maxPeticion + restoPeticion)==maxTotal){
+			maxPeticion = maxTotal;
+		}else{
+			maxPeticion = maxPeticion + (rangoServidor);
+			if (maxPeticion > maxTotal)
+				maxPeticion = maxTotal;
+			if ((maxPeticion-minPeticion)>limitePeticion)
+				maxPeticion=minPeticion+limitePeticion-1;
+		}
+
+		if (i != servidores){
+			i++;
+			hiloLibre = i;
+		}		
+
+	}
+
+	/**Esperar a que los hilos terminen**/
+	if (servidores == 1){
+		if((pthread_join(hilo[0], NULL)) != 0)
+			perror("Error al esperar al hilo");
+		close(sock[0]);
+	}else{
+		for(int s=0; s < i; s++){
+			//printf("esperando el hilo: %d \n", s);
+			if((pthread_join(hilo[s], NULL)) != 0)
+				perror("Error al esperar al hilo");
+			close(sock[s]);
+		}
+	}
+
+	gettimeofday(&finServicio, NULL);					//Fin del contador de servicio
+
+	/**Mostrar por pantalla los resultados de las peticiones**/
+	if(servicio == contarPrimos){
+	primosTotal = primosHiloSuma[0]+ primosHiloSuma[1]+ primosHiloSuma[2]+primosHiloSuma[3];
+	printf("PRIMOS entre %d <--> %d ===> %d \n", minTotal, maxTotal, primosTotal);
+	pthread_cond_destroy(&otroHilo);
+	}else if(servicio == obtenerPrimos){
+		printf("Primos obtenidos \n");
+		for(int s=0; s < servidores; s++)
+			for(int p=0; p<desplazar[s]; p++)
+				printf("\t %u", ntohl(matrizPrimos[s][p]));
+		pthread_cond_destroy(&otroHilo);
+	}
+	printf("\n");
+
+	gettimeofday(&finPrograma, NULL);					//Fin del contador de programa
+  printf("tiempo PROGRAMA : %ld micro-segundos\n", ((finPrograma.tv_sec * 1000000 + finPrograma.tv_usec) - (inicioPrograma.tv_sec * 1000000 + inicioPrograma.tv_usec)));
+  printf("tiempo SERVICIO: %ld micro-segundos\n", ((finServicio.tv_sec * 1000000 + finServicio.tv_usec) - (inicioServicio.tv_sec * 1000000 + inicioServicio.tv_usec)));
+
+  exit(0);
 }
 
-/**
- * Función que se ejecuta en cada thread.
- * @param arg
- */
-void *thread_primos(void *arg) {
-    struct timeval tval_inicio, tval_final, tval_resultado;
-    int id_thread, nip, servicio, min, max, i = 0;
-    CLIENT *sv;
-    int *num_primos;
+void* funcion(void* numeroServidor){
 
-    id_thread = (int) arg;
-    nip = parametros[id_thread][NIP];
-    servicio = parametros[id_thread][SERVICIO];
-    min = parametros[id_thread][MIN];
-    max = parametros[id_thread][MAX];
+	/**Obtención del nº de servidor pasado como argumento**/
+	int servidor = *((int *) numeroServidor);
+    CLIENTE *sv;
 
-    sv = clnt_create(namehosts[id_thread], PRIMOS, UNO, "tcp");
-    printf(MENSAJE_CONEXION_THREAD, id_thread);
-    gettimeofday(&tval_inicio, NULL);
+    sv = clnt_create(vectorServidores[servidor], PRIMOS, UNO, "tcp");
 
+	printf("HILO--> %d\tmin--> %d\tmax-->%d\t\n", servidor, minHilo[servidor], maxHilo[servidor]);
+
+	intPtr[servidor] = parametrosHilos[servidor];	
+	if(primerHilo){
+		primerHilo = false;
+		gettimeofday(&inicioServicio, NULL);							//iniciar el contador de servicio
+	}
+
+	/**Leer la respuesta del servidor a la peticion de servicio**/
     switch (servicio) {
-        case CONTAR_PRIMOS:
-            num_primos = contar_1(nip, min, max, sv);
-            gettimeofday(&tval_final, NULL);
-            timersub(&tval_final, &tval_inicio, &tval_resultado);
+        case CONTAR:
+            primosHilo[servidor] = contar_1(nip, minHilo[servidor], maxHilo[servidor], sv);
 
-            num_primos_threads[id_thread] = *num_primos;
+			primosHiloSuma[servidor] = primosHiloSuma[servidor] + ntohl(primosHilo[servidor]);
 
-            printf(MENSAJE_TIEMPO_SERVICIO,
-                   (long int) tval_resultado.tv_sec,
-                   (long int) tval_resultado.tv_usec, SERVICIOS[0], min, max);
+			/**Actualizar semáforo de control de creacion de hilos**/
+			pthread_mutex_lock(&mutexCond);
+			hilosCreados[servidor] =0;
+			pthread_cond_signal(&otroHilo);
+			pthread_mutex_unlock(&mutexCond);
             break;
-        case BUSCAR_PRIMOS:
-            primos_threads[id_thread] = buscar_1(nip, min, max, sv);
-            gettimeofday(&tval_final, NULL);
-            timersub(&tval_final, &tval_inicio, &tval_resultado);
+        case ENCONTRAR:
+            primos_threads[id_thread] = buscar_1(nip, minHilo[servidor], maxHilo[servidor], sv);
+			/**Actualizar semáforo de control de creacion de hilos**/
+			pthread_mutex_lock(&mutexCond);
+			hilosCreados[servidor] =0;
+			pthread_cond_signal(&otroHilo);
+			pthread_mutex_unlock(&mutexCond);
 
-            printf(MENSAJE_TIEMPO_SERVICIO,
-                   (long int) tval_resultado.tv_sec,
-                   (long int) tval_resultado.tv_usec, SERVICIOS[1], min, max);
             break;
     }
 
     clnt_destroy(sv);
     pthread_exit(0);
+
 }
 
+
+/**Función que devuelve el nº de hilo que no está ocupado**/
+int comprobar_hilos(int servidores){
+	for (int hilo = 0; hilo < servidores; hilo++){
+		if (hilosCreados[hilo]== 0)
+			return hilo;
+	}
+}
