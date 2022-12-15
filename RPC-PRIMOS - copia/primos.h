@@ -1,3 +1,4 @@
+
 #include <stdio.h>
 
 #define MINIMO 1L
@@ -17,3 +18,4 @@ int encuentra_primos(int min, int max, int vector[]);
 int cuenta_primos(int min, int max);
 void* funcion(void* numeroServidor);
 int comprobar_hilos(int servidores);
+

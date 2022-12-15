@@ -30,11 +30,11 @@ struct encontrados *buscar_1_svc(int nip, int min, int max, struct svc_req *reqs
     printf(INFO_SOLICITUD, nip, servicio[0], min, max);
 
     respuesta.nPrimos = encuentra_primos(min, max, respuesta.vectorPrimos);
-    
+    printf( "Nº primos encontrados %d", respuesta.nPrimos);
     printf(RESPUESTA_ENCONTRAR);
 
     for (i = 0; i < respuesta.nPrimos; i++) {
-        printf("%d \t ", respuesta.vectorPrimos[i]);
+        printf("%d \t ", htonl(respuesta.vectorPrimos[i]));
     }
     printf("\n");
 
