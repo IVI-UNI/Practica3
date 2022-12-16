@@ -11,13 +11,15 @@ char *servicio[] = {"contar", "buscar"};
  *Devuelve el número de primos encontrados el rango*/
 int *contar_1_svc(int nip, int min, int max, struct svc_req *rqstp) {
     static int nPrimos;
-
+    static struct timeval inicioFuncion, finFuncion;
     printf(INFO_SOLICITUD, nip, servicio[0], min, max);
 
+    gettimeofday(&inicioFuncion, NULL);	
     nPrimos = cuenta_primos(min, max);
+    gettimeofday(&finFuncion, NULL);	 
 
     printf(RESPUESTA_CONTAR, nPrimos, min, max);
-
+    printf("tiempo FUNCION : %ld micro-segundos\n", ((finFuncion.tv_sec * 1000000 + finFuncion.tv_usec) - (inicioFuncion.tv_sec * 1000000 + inicioFuncion.tv_usec)));  
     return (&nPrimos);
 }
 
@@ -26,18 +28,21 @@ int *contar_1_svc(int nip, int min, int max, struct svc_req *rqstp) {
 struct encontrados *buscar_1_svc(int nip, int min, int max, struct svc_req *reqstp) {
     int i;
     static struct encontrados respuesta;
+    static struct timeval inicioFuncion, finFuncion;
 
     printf(INFO_SOLICITUD, nip, servicio[0], min, max);
 
+    gettimeofday(&inicioFuncion, NULL);	
     respuesta.nPrimos = encuentra_primos(min, max, respuesta.vectorPrimos);
-    printf( "Nº primos encontrados %d", respuesta.nPrimos);
+    gettimeofday(&finFuncion, NULL);	 
+   printf( "Nº primos encontrados %d", respuesta.nPrimos);
     printf(RESPUESTA_ENCONTRAR);
 
     for (i = 0; i < respuesta.nPrimos; i++) {
         printf("%d \t ", htonl(respuesta.vectorPrimos[i]));
     }
     printf("\n");
-
+      printf("tiempo FUNCION : %ld micro-segundos\n", ((finFuncion.tv_sec * 1000000 + finFuncion.tv_usec) - (inicioFuncion.tv_sec * 1000000 + inicioFuncion.tv_usec)));  
     return (&respuesta);
 }
 
